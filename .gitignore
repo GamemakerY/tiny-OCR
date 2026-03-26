@@ -46,5 +46,4 @@ Thumbs.db
 *.swo
 
 logs/
-images/
 *.code-workspace
