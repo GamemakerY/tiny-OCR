@@ -32,7 +32,7 @@ The OCR process is split into a two-stage pipeline.
 
 **Parsing:** Extracts and resizes each detected character to a uniform square input (28x28) for the neural network.
 
-#### Phase 2: Inference (PyTorch)
+### Phase 2: Inference (PyTorch)
 The extracted characters are passed into a custom version of the ShuffleNet_V2:
 
 **Model Optimization:** I utilized Transfer Learning on a pre-trained ShuffleNet_V2 architecture.
