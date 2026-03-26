@@ -1,0 +1,50 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+bin/
+lib/
+include/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+
+# Unit test / coverage reports
+.tox/
+.nosepy
+.coverage
+.cache
+.pytest_cache/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Environment variables (NEVER commit these)
+.env
+.flaskenv
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+logs/
+images/
+*.code-workspace

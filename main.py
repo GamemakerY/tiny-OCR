@@ -6,11 +6,15 @@ import torch.nn as nn
 from torchvision import models
 import time
 
+
+
+img_path = input("Input the relative file path (Ex. images/test1.jpeg)")
+if img_path == '':
+    img_path = 'images/test1.jpeg'
+
 start_time = time.perf_counter()
 
-img_path = 'test1.jpeg'
-
-#To reduce time complexity, should help in real world scenarios, I think
+#To reduce time complexity, should help in real world scenarios, I think, 
 def reduce_check(img):
     h, w, c = img.shape
     if w > 1000:
@@ -23,7 +27,7 @@ def reduce_check(img):
 def thresholding(image, method='gaussian'):
     img_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) #No need twice, slight gaussian blur first???
 
-    #Otsu's works better than Adaptive in one of our example!(?)
+    #Otsu's works better than Adaptive in some of my examples!(?)
 
     blur = cv2.GaussianBlur(img_gray,(5,5),0)
     if method=='otsu':
@@ -39,15 +43,66 @@ def thresholding(image, method='gaussian'):
 #dilated = cv2.dilate(thresh_img, kernel, iterations = 1)
 def dilate(img):
     #cv2.MORPH_RECT for dilation, cv2.MORPH_Close for dilation and then erosion
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1,1)) #Why even?
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT,
+     (1,1)) #Why even?
     dilated = cv2.dilate(img, kernel, iterations = 1)
     return dilated
 
 
+def get_characters_v2(img, img_color):
+    # 1. WORD SEGMENTATION (Horizontal Dilation)
+    # This merges characters into "word blobs"
+    kernel = np.ones((3, 15), np.uint8) 
+    dilated_words = cv2.dilate(img, kernel, iterations=1)
+    
+    # Find word contours
+    word_contours, _ = cv2.findContours(dilated_words, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    # Sort words by Y then X
+    word_rects = [cv2.boundingRect(c) for c in word_contours if cv2.boundingRect(c)[2] > 5]
+    if not word_rects: return [], img_color
+    
+    avg_h = sum([r[3] for r in word_rects]) / len(word_rects)
+    # Sort top-to-bottom, then left-to-right
+    word_rects.sort(key=lambda r: (r[1] // (avg_h * 0.7), r[0]))
+    
+    processed_data = []
+    
+    for wx, wy, ww, wh in word_rects:
+        # 2. CHARACTER SEGMENTATION (Inside each word)
+        word_roi = img[wy:wy+wh, wx:wx+ww]
+        char_contours, _ = cv2.findContours(word_roi.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        # Sort characters inside the word left-to-right
+        char_rects = [cv2.boundingRect(c) for c in char_contours if cv2.boundingRect(c)[2] > 2]
+        char_rects.sort(key=lambda r: r[0])
+        
+        for i, (cx, cy, cw, ch) in enumerate(char_rects):
+            # Convert back to global coordinates
+            gx, gy = wx + cx, wy + cy
+            
+            # Normalization/Padding logic
+            sz = int(1.5 * max(cw, ch))
+            char_crop = img[gy:gy+ch, gx:gx+cw]
+            
+            pad_y, pad_x = (sz - ch) // 2, (sz - cw) // 2
+            padded = cv2.copyMakeBorder(char_crop, pad_y, sz-ch-pad_y, pad_x, sz-cw-pad_x, 
+                                        cv2.BORDER_CONSTANT, value=(0,0,0))
+            
+            final_img = cv2.resize(padded, (28, 28), interpolation=cv2.INTER_AREA)
+            
+            processed_data.append({
+                'image': final_img, 
+                'x': gx, 'y': gy, 'w': cw, 'h': ch,
+                'is_space_after': (i == len(char_rects) - 1) # Last char in word
+            })
+            
+    return processed_data, img_color
+
+'''
 #plt.imshow(dilated, cmap='gray');
 def get_characters(img, img_color):
-    #MMAGGGICC I GOT FROM GEMINIIII
-
+    #MMAGGGICC I GOT FROM GEMINIIII 
 
     # 1. Find contours
     contours, _ = cv2.findContours(img.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -118,6 +173,8 @@ def get_characters(img, img_color):
             'h': h})
         
     return processed_data, img_color
+
+'''
 '''
 def get_characters(img, img_color):
     im2 = img_color.copy()#This needs to be the original image, I was taking grayscale, for making boxes! (Make it better later)
@@ -178,7 +235,7 @@ def preprocess(img_path):
     img = reduce_check(img)
     img = thresholding(img, 'otsu')
     img = cv2.bitwise_not(img) #Later, have an option to check this, if the background is black already
-    character_dict, img_boxes = get_characters(img, img_color)
+    character_dict, img_boxes = get_characters_v2(img, img_color)
     return character_dict, img_boxes
 
 def debug_visualize(character_list):
@@ -197,18 +254,38 @@ def debug_visualize(character_list):
     plt.tight_layout()
     plt.show()
 
+def word_segmentation(img):
+    kernel = np.ones((3,15), np.uint8) #Experiment
+    dilated_img = cv2.dilate(img, kernel, iterations=1)
+
+    contours, _ = cv2.findContours(img.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    # 2. Get bounding boxes and FILTER tiny noise
+    rects = []
+    for cnt in contours:
+        x, y, w, h = cv2.boundingRect(cnt)
+        rects.append([x, y, w, h])
+
+    if not rects: return []
+
+    return len(contours)
 
 
-character_dict, img_boxes = preprocess('test1.jpeg')
+
+
+
+character_dict, img_boxes = preprocess(img_path)
 #debug_visualize(character_dict)
-
 
 pred_list=[]
 img_final = img_boxes.copy()
-for i in range(len(character_dict)):
-    prediction = predict(character_dict[i]['image'], model)
-    cv2.putText(img_final, prediction, (character_dict[i]['x'], character_dict[i]['y']+2),cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2)
+for char in character_dict:
+    prediction = predict(char['image'], model)
+    cv2.putText(img_final, prediction, (char['x'], char['y']+2),cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2)
     pred_list.append(prediction)
+
+    if char['is_space_after']:
+        pred_list.append(" ")
 
 print(*pred_list)
 end_time = time.perf_counter()
@@ -216,13 +293,11 @@ elapsed_time = end_time - start_time
 
 print(f'Total time elapsed: {elapsed_time} seconds')
 
+
 plt.figure(figsize = (12,8))
 plt.imshow(img_final)
 plt.axis('off')
 plt.show()
-
-
-
 
 
 
