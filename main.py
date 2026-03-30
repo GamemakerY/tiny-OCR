@@ -1,17 +1,25 @@
 import cv2
 import numpy as np
+import matplotlib
+matplotlib.use('TkAgg') #Fix for window not showing in build
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 from torchvision import models
 import time
+import sys
 
 
-
+if len(sys.argv) > 1:
+    img_path = sys.argv[1]
+else:
+    # Fallback to default if no argument is provided
+    img_path = 'images/test1.jpeg'
+'''
 img_path = input("Input the relative file path (Ex. images/test1.jpeg)")
 if img_path == '':
     img_path = 'images/test1.jpeg'
-
+'''
 start_time = time.perf_counter()
 
 #To reduce time complexity, should help in real world scenarios, I think, 
@@ -196,11 +204,19 @@ def get_characters(img, img_color):
         cropped_images.append(final_image)
     return cropped_images
 '''
+#CUSTOM FOR PYINSTALLER
 
 
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 
-def get_model(model_path="model.bin"):
+def get_model(model_path=resource_path("model.bin")):
     model = models.shufflenet_v2_x0_5()
 
     model.conv1[0] = nn.Conv2d(1, 24, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
