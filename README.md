@@ -1,4 +1,4 @@
-# Tiny-OCR
+# TinyOCR
 TinyOCR: A proof-of-concept prototype of an OCR that I built as  a challenge.x
 
 ## Constraints
@@ -46,8 +46,10 @@ The extracted characters are passed into a custom version of the ShuffleNet_V2:
 2. Activate it: `venv\Scripts\activate` (Windows)
 3. Install dependencies: `pip install -r requirements.txt`
 
+
 ## How To Use
 
-Simply input the relative file path or press enter to see a sample (Stored in images/)
+Put your images inside the folder containing main.exe
+Open terminal in the folder and run '.\main.exe "PATH_TO_IMAGE"', where PATH_TO_IMAGE is the relative path to your image.
 
 There are a lot of features that could be way better, especially the accuracy.
